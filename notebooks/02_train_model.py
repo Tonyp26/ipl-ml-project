@@ -4,6 +4,9 @@ IPL Tournament Winner Prediction - Phase 2: Model Training
 Loads processed match data, trains classifiers to predict match winners
 using pre-match features, evaluates performance, and saves the model.
 
+Chronological train/test split: trains on earlier seasons, tests on later
+seasons to avoid temporal data leakage.
+
 Uses scikit-learn RandomForest.
 """
 
@@ -155,14 +158,26 @@ def prepare_features(df):
     return X, y, feature_cols, team_le
 
 
-def train_and_evaluate(X, y, feature_cols, team_le):
-    """Train with random stratified split."""
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+def train_and_evaluate(X, y, feature_cols, team_le, df):
+    """Train with CHRONOLOGICAL split: earlier seasons train, later seasons test."""
+    seasons = pd.to_numeric(
+        df["season"].str.replace("/", "."), errors="coerce"
+    ).fillna(2008)
 
-    print(f"\nTrain: {len(X_train)} | Test: {len(X_test)}")
-    print(f"Train win rate: {y_train.mean():.1%} | Test win rate: {y_test.mean():.1%}")
+    # Last 3 seasons as test
+    unique_seasons = sorted(seasons.unique())
+    threshold = unique_seasons[-3]
+
+    train_mask = seasons < threshold
+    test_mask = seasons >= threshold
+
+    X_train, X_test = X[train_mask], X[test_mask]
+    y_train, y_test = y[train_mask], y[test_mask]
+
+    print(f"\nChronological split (threshold: season {threshold})")
+    print(f"  Train: {len(X_train)} (seasons < {threshold})")
+    print(f"  Test:  {len(X_test)}  (seasons >= {threshold})")
+    print(f"  Train win rate: {y_train.mean():.1%} | Test win rate: {y_test.mean():.1%}")
 
     model = RandomForestClassifier(
         n_estimators=300, max_depth=8, min_samples_leaf=15,
@@ -205,6 +220,7 @@ def train_and_evaluate(X, y, feature_cols, team_le):
         "y_pred": pred, "y_proba": proba,
         "team_le": team_le, "feature_cols": feature_cols,
         "confusion_matrix": cm,
+        "test_season_threshold": threshold,
     }
 
 
@@ -293,7 +309,7 @@ def main():
     print(f"  Features: {len(feature_cols)} | Samples: {len(X)}")
 
     print("\nTraining...")
-    result = train_and_evaluate(X, y, feature_cols, team_le)
+    result = train_and_evaluate(X, y, feature_cols, team_le, df)
 
     print("\nSaving...")
     save_artifacts(result)
