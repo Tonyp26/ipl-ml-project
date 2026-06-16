@@ -32,6 +32,7 @@ DATA_PATH = BASE_DIR / "data" / "processed" / "matches.csv"
 ELO_PATH = BASE_DIR / "data" / "processed" / "matches_with_elo.csv"
 VENUE_PATH = BASE_DIR / "data" / "processed" / "matches_with_venue.csv"
 MOMENTUM_PATH = BASE_DIR / "data" / "processed" / "matches_with_momentum.csv"
+SCORING_PATH = BASE_DIR / "data" / "processed" / "matches_with_scoring.csv"
 MODEL_DIR = BASE_DIR / "models"
 FEATURES_PATH = MODEL_DIR / "feature_config.json"
 EVAL_PATH = MODEL_DIR / "evaluation.json"
@@ -49,7 +50,7 @@ def normalise(name):
     return TEAM_MAP.get(name, name)
 
 
-def prepare_features(df, has_elo=False, has_venue=False, has_momentum=False):
+def prepare_features(df, has_elo=False, has_venue=False, has_momentum=False, has_scoring=False):
     """Build pre-match features."""
     df = df.copy()
     df["batting_team"] = df["batting_team"].apply(normalise)
@@ -173,6 +174,17 @@ def prepare_features(df, has_elo=False, has_venue=False, has_momentum=False):
             "team1_matches_since_loss", "team2_matches_since_loss",
         ])
         print(f"  + Momentum features enabled (11 features)")
+    if has_scoring and "nrr_diff" in df.columns:
+        feature_cols.extend([
+            "runs_scored_diff", "runs_conceded_diff",
+            "nrr_diff",
+            "team1_nrr", "team2_nrr",
+            "team1_avg_runs_scored_last10", "team2_avg_runs_scored_last10",
+            "team1_avg_runs_conceded_last10", "team2_avg_runs_conceded_last10",
+            "team1_powerplay_run_rate", "team2_powerplay_run_rate",
+            "team1_death_over_run_rate", "team2_death_over_run_rate",
+        ])
+        print(f"  + Scoring/NRR features enabled (13 features)")
 
     df = df.dropna(subset=feature_cols + ["team1_won"])
     X = df[feature_cols].values
@@ -348,34 +360,46 @@ def main():
     print("=" * 60)
 
     print(f"\nLoading data...")
-    if MOMENTUM_PATH.exists():
+    if SCORING_PATH.exists():
+        df = pd.read_csv(SCORING_PATH)
+        print(f"  Loaded scoring features ({len(df)} matches)")
+        has_scoring = True
+        has_momentum = "last3_diff" in df.columns
+        has_venue = "venue_win_pct_diff" in df.columns
+        has_elo = "elo_diff" in df.columns
+    elif MOMENTUM_PATH.exists():
         df = pd.read_csv(MOMENTUM_PATH)
         print(f"  Loaded momentum features ({len(df)} matches)")
+        has_scoring = False
         has_momentum = True
         has_venue = "venue_win_pct_diff" in df.columns
         has_elo = "elo_diff" in df.columns
     elif VENUE_PATH.exists():
         df = pd.read_csv(VENUE_PATH)
         print(f"  Loaded venue features ({len(df)} matches)")
+        has_scoring = False
         has_momentum = False
         has_venue = True
         has_elo = "elo_diff" in df.columns
     elif ELO_PATH.exists():
         df = pd.read_csv(ELO_PATH)
         print(f"  Loaded Elo features ({len(df)} matches)")
+        has_scoring = False
         has_momentum = False
         has_venue = False
         has_elo = True
     else:
         df = pd.read_csv(DATA_PATH)
         print(f"  Loaded base data ({len(df)} matches)")
+        has_scoring = False
         has_momentum = False
         has_venue = False
         has_elo = False
 
     print("\nPreparing features...")
     X, y, feature_cols, team_le = prepare_features(
-        df, has_elo=has_elo, has_venue=has_venue, has_momentum=has_momentum
+        df, has_elo=has_elo, has_venue=has_venue,
+        has_momentum=has_momentum, has_scoring=has_scoring
     )
     print(f"  Features: {len(feature_cols)} | Samples: {len(X)}")
 
