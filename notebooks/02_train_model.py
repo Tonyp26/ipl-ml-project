@@ -15,7 +15,7 @@ import numpy as np
 import joblib
 import json
 from pathlib import Path
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, TimeSeriesSplit
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import (
@@ -202,6 +202,27 @@ def train_and_evaluate(X, y, feature_cols, team_le, df):
     print(f"  TN={cm[0][0]}  FN={cm[0][1]}")
     print(f"  FP={cm[1][0]}  TP={cm[1][1]}")
 
+    # Time-series cross-validation (expanding window)
+    print("\nTime-Series Cross-Validation (5-fold expanding window):")
+    tscv = TimeSeriesSplit(n_splits=5)
+    cv_aucs = []
+    for fold, (tr_idx, val_idx) in enumerate(tscv.split(X)):
+        X_tr, X_val = X[tr_idx], X[val_idx]
+        y_tr, y_val = y[tr_idx], y[val_idx]
+        m = RandomForestClassifier(
+            n_estimators=300, max_depth=8, min_samples_leaf=15,
+            random_state=42, n_jobs=-1,
+        )
+        m.fit(X_tr, y_tr)
+        val_proba = m.predict_proba(X_val)[:, 1]
+        if len(np.unique(y_val)) > 1:
+            fold_auc = roc_auc_score(y_val, val_proba)
+            cv_aucs.append(fold_auc)
+            print(f"  Fold {fold+1}: AUC = {fold_auc:.4f}")
+    cv_mean = np.mean(cv_aucs) if cv_aucs else 0.5
+    cv_std = np.std(cv_aucs) if cv_aucs else 0.0
+    print(f"  Mean AUC: {cv_mean:.4f} +/- {cv_std:.4f}")
+
     importances = model.feature_importances_
     feat_imp = pd.DataFrame(
         {"feature": feature_cols, "importance": importances}
@@ -216,6 +237,7 @@ def train_and_evaluate(X, y, feature_cols, team_le, df):
         "model": model, "name": "RandomForest",
         "accuracy": acc, "auc": auc,
         "precision": prec, "recall": rec,
+        "cv_auc_mean": cv_mean, "cv_auc_std": cv_std,
         "feature_importance": feat_imp, "y_test": y_test,
         "y_pred": pred, "y_proba": proba,
         "team_le": team_le, "feature_cols": feature_cols,
@@ -246,6 +268,8 @@ def save_artifacts(result):
             "roc_auc": round(result["auc"], 4),
             "precision": round(result["precision"], 4),
             "recall": round(result["recall"], 4),
+            "cv_auc_mean": round(result.get("cv_auc_mean", 0), 4),
+            "cv_auc_std": round(result.get("cv_auc_std", 0), 4),
             "confusion_matrix": {
                 "TN": int(cm[0][0]), "FN": int(cm[0][1]),
                 "FP": int(cm[1][0]), "TP": int(cm[1][1]),
@@ -315,7 +339,12 @@ def main():
     save_artifacts(result)
     plot_results(result)
 
-    print(f"\nDone — {result['name']} | Acc: {result['accuracy']:.4f} | AUC: {result['auc']:.4f}")
+    print(f"\nDone — {result['name']}")
+    print(f"  Accuracy:     {result['accuracy']:.4f}")
+    print(f"  ROC-AUC:      {result['auc']:.4f}")
+    print(f"  Precision:    {result['precision']:.4f}")
+    print(f"  Recall:       {result['recall']:.4f}")
+    print(f"  TS-CV AUC:    {result.get('cv_auc_mean', 0):.4f} +/- {result.get('cv_auc_std', 0):.4f}")
 
 
 if __name__ == "__main__":
