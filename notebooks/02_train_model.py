@@ -1,0 +1,306 @@
+"""
+IPL Tournament Winner Prediction - Phase 2: Model Training
+============================================================
+Loads processed match data, trains classifiers to predict match winners
+using pre-match features, evaluates performance, and saves the model.
+
+Uses scikit-learn RandomForest.
+"""
+
+import pandas as pd
+import numpy as np
+import joblib
+import json
+from pathlib import Path
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import (
+    accuracy_score, roc_auc_score, classification_report,
+    confusion_matrix, precision_score, recall_score,
+)
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_PATH = BASE_DIR / "data" / "processed" / "matches.csv"
+MODEL_DIR = BASE_DIR / "models"
+FEATURES_PATH = MODEL_DIR / "feature_config.json"
+EVAL_PATH = MODEL_DIR / "evaluation.json"
+
+TEAM_MAP = {
+    "Delhi Daredevils": "Delhi Capitals",
+    "Kings XI Punjab": "Punjab Kings",
+    "Royal Challengers Bangalore": "Royal Challengers Bengaluru",
+    "Rising Pune Supergiant": "Rising Pune Supergiants",
+    "Deccan Chargers": "Sunrisers Hyderabad",
+}
+
+
+def normalise(name):
+    return TEAM_MAP.get(name, name)
+
+
+def prepare_features(df):
+    """Build pre-match features."""
+    df = df.copy()
+    df["batting_team"] = df["batting_team"].apply(normalise)
+    df["bowling_team"] = df["bowling_team"].apply(normalise)
+    df["toss_winner"] = df["toss_winner"].apply(normalise)
+
+    df = df.sort_values("date").reset_index(drop=True)
+
+    all_teams = sorted(
+        set(df["batting_team"].unique()) | set(df["bowling_team"].unique())
+    )
+    team_le = LabelEncoder()
+    team_le.fit(all_teams)
+    df["t1_enc"] = team_le.transform(df["batting_team"])
+    df["t2_enc"] = team_le.transform(df["bowling_team"])
+    df["toss_enc"] = team_le.transform(df["toss_winner"])
+
+    venue_freq = df["venue"].value_counts(normalize=True)
+    df["venue_freq"] = df["venue"].map(venue_freq)
+
+    df["season_num"] = pd.to_numeric(
+        df["season"].str.replace("/", "."), errors="coerce"
+    ).fillna(2008)
+
+    df["t1_home"] = (df["batting_team"] == df["city"]).astype(int)
+    df["t2_home"] = (df["bowling_team"] == df["city"]).astype(int)
+
+    df["toss_winner_bat_first"] = (df["toss_winner"] == df["batting_team"]).astype(int)
+    df["toss_field"] = (df["toss_decision"] == "field").astype(int)
+
+    venue_avg = df.groupby("venue")["inn1_runs"].mean()
+    df["venue_avg_inn1"] = df["venue"].map(venue_avg)
+
+    # Rolling features (chronological — only prior matches)
+    team_records = {}
+    for t in all_teams:
+        team_records[t] = {"wins": 0, "matches": 0, "results": []}
+
+    h2h = {}
+    t1_recent5, t2_recent5 = [], []
+    t1_recent10, t2_recent10 = [], []
+    t1_cum_pct, t2_cum_pct = [], []
+    t1_matches, t2_matches = [], []
+    t1_h2h_pct, t1_h2h_n = [], []
+
+    for idx, row in df.iterrows():
+        t1, t2 = row["batting_team"], row["bowling_team"]
+
+        r1 = team_records[t1]["results"]
+        t1_recent5.append(np.mean(r1[-5:]) if r1 else 0.5)
+        t1_recent10.append(np.mean(r1[-10:]) if r1 else 0.5)
+        t1_cum_pct.append(team_records[t1]["wins"] / max(team_records[t1]["matches"], 1))
+        t1_matches.append(team_records[t1]["matches"])
+
+        r2 = team_records[t2]["results"]
+        t2_recent5.append(np.mean(r2[-5:]) if r2 else 0.5)
+        t2_recent10.append(np.mean(r2[-10:]) if r2 else 0.5)
+        t2_cum_pct.append(team_records[t2]["wins"] / max(team_records[t2]["matches"], 1))
+        t2_matches.append(team_records[t2]["matches"])
+
+        key = (t1, t2)
+        rev_key = (t2, t1)
+        h2h_list = h2h.get(key, []) + h2h.get(rev_key, [])
+        t1_h2h_pct.append(np.mean(h2h_list) if h2h_list else 0.5)
+        t1_h2h_n.append(len(h2h_list))
+
+        won = int(row["team1_won"])
+        team_records[t1]["wins"] += won
+        team_records[t1]["matches"] += 1
+        team_records[t1]["results"].append(won)
+        team_records[t2]["wins"] += (1 - won)
+        team_records[t2]["matches"] += 1
+        team_records[t2]["results"].append(1 - won)
+        if key not in h2h:
+            h2h[key] = []
+        h2h[key].append(won)
+
+    df["t1_recent5"] = t1_recent5
+    df["t2_recent5"] = t2_recent5
+    df["t1_recent10"] = t1_recent10
+    df["t2_recent10"] = t2_recent10
+    df["t1_cum_pct"] = t1_cum_pct
+    df["t2_cum_pct"] = t2_cum_pct
+    df["t1_matches"] = t1_matches
+    df["t2_matches"] = t2_matches
+    df["t1_h2h_pct"] = t1_h2h_pct
+    df["t1_h2h_n"] = t1_h2h_n
+
+    df["recent5_diff"] = df["t1_recent5"] - df["t2_recent5"]
+    df["recent10_diff"] = df["t1_recent10"] - df["t2_recent10"]
+    df["cum_pct_diff"] = df["t1_cum_pct"] - df["t2_cum_pct"]
+    df["home_diff"] = df["t1_home"] - df["t2_home"]
+    df["matches_diff"] = df["t1_matches"].astype(float) - df["t2_matches"].astype(float)
+
+    feature_cols = [
+        "t1_enc", "t2_enc", "toss_enc",
+        "toss_winner_bat_first", "toss_field",
+        "venue_freq", "venue_avg_inn1",
+        "recent5_diff", "recent10_diff", "cum_pct_diff",
+        "t1_h2h_pct", "t1_h2h_n",
+        "home_diff", "t1_matches", "t2_matches",
+        "season_num",
+    ]
+
+    df = df.dropna(subset=feature_cols + ["team1_won"])
+    X = df[feature_cols].values
+    y = df["team1_won"].values
+
+    return X, y, feature_cols, team_le
+
+
+def train_and_evaluate(X, y, feature_cols, team_le):
+    """Train with random stratified split."""
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    print(f"\nTrain: {len(X_train)} | Test: {len(X_test)}")
+    print(f"Train win rate: {y_train.mean():.1%} | Test win rate: {y_test.mean():.1%}")
+
+    model = RandomForestClassifier(
+        n_estimators=300, max_depth=8, min_samples_leaf=15,
+        random_state=42, n_jobs=-1,
+    )
+    model.fit(X_train, y_train)
+    pred = model.predict(X_test)
+    proba = model.predict_proba(X_test)[:, 1]
+
+    acc = accuracy_score(y_test, pred)
+    auc = roc_auc_score(y_test, proba)
+    prec = precision_score(y_test, pred, zero_division=0)
+    rec = recall_score(y_test, pred, zero_division=0)
+
+    print(f"\nRandomForest — Acc: {acc:.4f} | AUC: {auc:.4f} | Prec: {prec:.4f} | Rec: {rec:.4f}")
+
+    print("\nClassification Report:")
+    print(classification_report(y_test, pred, target_names=["Team 2 won", "Team 1 won"]))
+
+    cm = confusion_matrix(y_test, pred)
+    print("Confusion Matrix:")
+    print(f"  TN={cm[0][0]}  FN={cm[0][1]}")
+    print(f"  FP={cm[1][0]}  TP={cm[1][1]}")
+
+    importances = model.feature_importances_
+    feat_imp = pd.DataFrame(
+        {"feature": feature_cols, "importance": importances}
+    ).sort_values("importance", ascending=False)
+
+    print("\nFeature Importance:")
+    for _, r in feat_imp.iterrows():
+        bar = "#" * int(r["importance"] * 50)
+        print(f"  {r['feature']:<25} {r['importance']:.4f} {bar}")
+
+    return {
+        "model": model, "name": "RandomForest",
+        "accuracy": acc, "auc": auc,
+        "precision": prec, "recall": rec,
+        "feature_importance": feat_imp, "y_test": y_test,
+        "y_pred": pred, "y_proba": proba,
+        "team_le": team_le, "feature_cols": feature_cols,
+        "confusion_matrix": cm,
+    }
+
+
+def save_artifacts(result):
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    model_path = MODEL_DIR / "random_forest_model.joblib"
+    encoder_path = MODEL_DIR / "team_encoder.joblib"
+
+    joblib.dump(result["model"], model_path)
+    joblib.dump(result["team_le"], encoder_path)
+
+    with open(FEATURES_PATH, "w") as f:
+        json.dump(
+            {"feature_cols": result["feature_cols"], "model_name": result["name"]},
+            f, indent=2,
+        )
+
+    cm = result["confusion_matrix"]
+    with open(EVAL_PATH, "w") as f:
+        json.dump({
+            "model": result["name"],
+            "accuracy": round(result["accuracy"], 4),
+            "roc_auc": round(result["auc"], 4),
+            "precision": round(result["precision"], 4),
+            "recall": round(result["recall"], 4),
+            "confusion_matrix": {
+                "TN": int(cm[0][0]), "FN": int(cm[0][1]),
+                "FP": int(cm[1][0]), "TP": int(cm[1][1]),
+            },
+        }, f, indent=2)
+
+    print(f"\nSaved model: {model_path}")
+
+
+def plot_results(result):
+    # Feature importance
+    fig, ax = plt.subplots(figsize=(10, 7))
+    top = result["feature_importance"].head(12).iloc[::-1]
+    ax.barh(top["feature"], top["importance"], color="#4472C4")
+    ax.set_xlabel("Importance")
+    ax.set_title(f"Feature Importance - {result['name']}")
+    plt.tight_layout()
+    fig.savefig(MODEL_DIR / "feature_importance.png", dpi=150)
+    plt.close()
+
+    # ROC curve
+    fig, ax = plt.subplots(figsize=(7, 5))
+    if len(np.unique(result["y_test"])) > 1:
+        from sklearn.metrics import RocCurveDisplay
+        RocCurveDisplay.from_predictions(
+            result["y_test"], result["y_proba"], ax=ax,
+            name=f"AUC={result['auc']:.4f}"
+        )
+    ax.plot([0, 1], [0, 1], "k--", label="Random")
+    ax.set_title("ROC Curve")
+    ax.legend()
+    plt.tight_layout()
+    fig.savefig(MODEL_DIR / "roc_curve.png", dpi=150)
+    plt.close()
+
+    # Confusion matrix
+    fig, ax = plt.subplots(figsize=(5, 4))
+    cm = result["confusion_matrix"]
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax,
+                xticklabels=["Team 2", "Team 1"],
+                yticklabels=["Team 2", "Team 1"])
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("Actual")
+    ax.set_title("Confusion Matrix")
+    plt.tight_layout()
+    fig.savefig(MODEL_DIR / "confusion_matrix.png", dpi=150)
+    plt.close()
+
+
+def main():
+    print("=" * 60)
+    print("IPL Model Training - Phase 2")
+    print("=" * 60)
+
+    print(f"\nLoading {DATA_PATH} ...")
+    df = pd.read_csv(DATA_PATH)
+    print(f"  {len(df)} matches")
+
+    print("\nPreparing features...")
+    X, y, feature_cols, team_le = prepare_features(df)
+    print(f"  Features: {len(feature_cols)} | Samples: {len(X)}")
+
+    print("\nTraining...")
+    result = train_and_evaluate(X, y, feature_cols, team_le)
+
+    print("\nSaving...")
+    save_artifacts(result)
+    plot_results(result)
+
+    print(f"\nDone — {result['name']} | Acc: {result['accuracy']:.4f} | AUC: {result['auc']:.4f}")
+
+
+if __name__ == "__main__":
+    main()
