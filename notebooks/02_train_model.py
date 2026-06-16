@@ -30,6 +30,7 @@ import seaborn as sns
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_PATH = BASE_DIR / "data" / "processed" / "matches.csv"
 ELO_PATH = BASE_DIR / "data" / "processed" / "matches_with_elo.csv"
+VENUE_PATH = BASE_DIR / "data" / "processed" / "matches_with_venue.csv"
 MODEL_DIR = BASE_DIR / "models"
 FEATURES_PATH = MODEL_DIR / "feature_config.json"
 EVAL_PATH = MODEL_DIR / "evaluation.json"
@@ -47,7 +48,7 @@ def normalise(name):
     return TEAM_MAP.get(name, name)
 
 
-def prepare_features(df, has_elo=False):
+def prepare_features(df, has_elo=False, has_venue=False):
     """Build pre-match features."""
     df = df.copy()
     df["batting_team"] = df["batting_team"].apply(normalise)
@@ -154,6 +155,14 @@ def prepare_features(df, has_elo=False):
     if has_elo and "elo_diff" in df.columns:
         feature_cols.append("elo_diff")
         print(f"  + Elo features enabled (elo_diff)")
+    if has_venue and "venue_win_pct_diff" in df.columns:
+        feature_cols.extend([
+            "venue_win_pct_diff",
+            "team1_venue_win_pct", "team2_venue_win_pct",
+            "team1_venue_matches", "team2_venue_matches",
+            "team1_avg_runs_at_venue", "team2_avg_runs_at_venue",
+        ])
+        print(f"  + Venue features enabled (7 features)")
 
     df = df.dropna(subset=feature_cols + ["team1_won"])
     X = df[feature_cols].values
@@ -329,17 +338,24 @@ def main():
     print("=" * 60)
 
     print(f"\nLoading data...")
-    if ELO_PATH.exists():
+    if VENUE_PATH.exists():
+        df = pd.read_csv(VENUE_PATH)
+        print(f"  Loaded venue features ({len(df)} matches)")
+        has_venue = True
+        has_elo = "elo_diff" in df.columns
+    elif ELO_PATH.exists():
         df = pd.read_csv(ELO_PATH)
-        print(f"  Loaded {ELO_PATH} ({len(df)} matches, with Elo features)")
+        print(f"  Loaded Elo features ({len(df)} matches)")
+        has_venue = False
         has_elo = True
     else:
         df = pd.read_csv(DATA_PATH)
-        print(f"  Loaded {DATA_PATH} ({len(df)} matches)")
+        print(f"  Loaded base data ({len(df)} matches)")
+        has_venue = False
         has_elo = False
 
     print("\nPreparing features...")
-    X, y, feature_cols, team_le = prepare_features(df, has_elo=has_elo)
+    X, y, feature_cols, team_le = prepare_features(df, has_elo=has_elo, has_venue=has_venue)
     print(f"  Features: {len(feature_cols)} | Samples: {len(X)}")
 
     print("\nTraining...")
