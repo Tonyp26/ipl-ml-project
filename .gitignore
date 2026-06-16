@@ -1,5 +1,12 @@
-data/
-*.csv
 __pycache__/
 .venv/
 .vscode/
+
+# Generated artifacts (not source code)
+data/processed/*.csv
+data/IPL.csv
+models/*.joblib
+models/*.png
+models/*.json
+models/*.pkl
+notebooks/.ipynb_checkpoints/
