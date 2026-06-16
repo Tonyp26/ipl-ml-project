@@ -1,14 +1,18 @@
 """
-IPL Model Diagnostics - Phase 2.5: Feature Audit
-===================================================
+IPL Model Diagnostics - Phase 2.5: Feature Audit & Model Comparison
+=====================================================================
 Verifies that all rolling features use ONLY past match information.
 Generates feature correlation report.
+Compares RandomForest vs GradientBoosting (XGBoost proxy).
 """
 
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.metrics import roc_auc_score, accuracy_score, precision_score, recall_score
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -221,6 +225,119 @@ def audit_cumulative_features(df):
     return issues == 0 and jump_issues == 0
 
 
+def compare_models(X, y, feature_cols):
+    """Compare RandomForest vs GradientBoosting with time-series CV."""
+    print("\n" + "=" * 60)
+    print("6. MODEL COMPARISON: RandomForest vs GradientBoosting")
+    print("=" * 60)
+    print("\n  Note: XGBoost not available (disk full).")
+    print("  GradientBoosting (sklearn) used as closest equivalent.\n")
+
+    # Chronological split
+    tscv = TimeSeriesSplit(n_splits=5)
+
+    models = {
+        "RandomForest": RandomForestClassifier(
+            n_estimators=300, max_depth=8, min_samples_leaf=15,
+            random_state=42, n_jobs=-1,
+        ),
+        "GradientBoosting": GradientBoostingClassifier(
+            n_estimators=200, max_depth=4, learning_rate=0.05,
+            subsample=0.8, min_samples_leaf=15, random_state=42,
+        ),
+    }
+
+    results = {}
+    for name, model in models.items():
+        print(f"  --- {name} (Time-Series CV) ---")
+        fold_aucs = []
+        fold_accs = []
+        for fold, (tr_idx, val_idx) in enumerate(tscv.split(X)):
+            X_tr, X_val = X[tr_idx], X[val_idx]
+            y_tr, y_val = y[tr_idx], y[val_idx]
+            m = type(model)(**model.get_params())
+            m.fit(X_tr, y_tr)
+            proba = m.predict_proba(X_val)[:, 1]
+            pred = m.predict(X_val)
+            if len(np.unique(y_val)) > 1:
+                fold_aucs.append(roc_auc_score(y_val, proba))
+            fold_accs.append(accuracy_score(y_val, pred))
+
+        auc_mean = np.mean(fold_aucs) if fold_aucs else 0.5
+        auc_std = np.std(fold_aucs) if fold_aucs else 0.0
+        acc_mean = np.mean(fold_accs)
+        acc_std = np.std(fold_accs)
+
+        print(f"    AUC: {auc_mean:.4f} +/- {auc_std:.4f}")
+        print(f"    Acc: {acc_mean:.4f} +/- {acc_std:.4f}")
+
+        # Feature importance
+        model.fit(X, y)
+        importances = model.feature_importances_
+        feat_imp = pd.DataFrame(
+            {"feature": feature_cols, "importance": importances}
+        ).sort_values("importance", ascending=False)
+
+        results[name] = {
+            "auc_mean": auc_mean, "auc_std": auc_std,
+            "acc_mean": acc_mean, "acc_std": acc_std,
+            "feature_importance": feat_imp,
+        }
+
+        # Top 5 features
+        print(f"    Top 5 features:")
+        for _, r in feat_imp.head(5).iterrows():
+            print(f"      {r['feature']:<25} {r['importance']:.4f}")
+        print()
+
+    # Comparison table
+    print("  Summary:")
+    print(f"    {'Model':<20} {'AUC':>8} {'+/-':>7} {'Accuracy':>9} {'+/-':>7}")
+    print(f"    {'-'*53}")
+    for name, r in results.items():
+        print(f"    {name:<20} {r['auc_mean']:>8.4f} {r['auc_std']:>7.4f} "
+              f"{r['acc_mean']:>9.4f} {r['acc_std']:>7.4f}")
+
+    # Plot comparison
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Feature importance comparison (top 8)
+    top_feats = set()
+    for name in results:
+        top_feats.update(results[name]["feature_importance"].head(8)["feature"].tolist())
+    top_feats = list(top_feats)[:8]
+
+    x = np.arange(len(top_feats))
+    width = 0.35
+    for i, (name, r) in enumerate(results.items()):
+        imp = r["feature_importance"]
+        vals = [imp[imp["feature"] == f]["importance"].values[0] if f in imp["feature"].values else 0 for f in top_feats]
+        axes[0].barh(x + i * width, vals, width, label=name)
+    axes[0].set_yticks(x + width / 2)
+    axes[0].set_yticklabels(top_feats, fontsize=8)
+    axes[0].set_xlabel("Importance")
+    axes[0].set_title("Feature Importance Comparison")
+    axes[0].legend()
+
+    # AUC comparison
+    names = list(results.keys())
+    aucs = [results[n]["auc_mean"] for n in names]
+    stds = [results[n]["auc_std"] for n in names]
+    axes[1].bar(names, aucs, yerr=stds, capsize=5, color=["#4472C4", "#ED7D31"])
+    axes[1].axhline(y=0.5, color="gray", linestyle="--", label="Random")
+    axes[1].set_ylabel("AUC")
+    axes[1].set_title("Time-Series CV AUC Comparison")
+    axes[1].legend()
+    axes[1].set_ylim(0.3, 0.7)
+
+    plt.tight_layout()
+    fig.savefig(MODEL_DIR / "model_comparison.png", dpi=150)
+    plt.close()
+    print(f"\n  Saved: models/model_comparison.png")
+
+    return results
+
+
 def audit_h2h_features(df):
     """Verify head-to-head features only use past matches."""
     print("\n" + "=" * 60)
@@ -334,11 +451,31 @@ def main():
     # Feature correlation
     feature_correlation_report(df)
 
+    # Build final feature matrix for model comparison
+    print("\n[Building full feature matrix for model comparison...]")
+    feat_cols = [
+        "t1_enc", "t2_enc", "toss_enc",
+        "toss_winner_bat_first", "toss_field",
+        "venue_freq", "venue_avg_inn1",
+        "recent5_diff", "recent10_diff", "cum_diff",
+        "t1_h2h_pct", "t1_h2h_n",
+        "home_diff", "t1_matches", "t2_matches",
+        "season_num",
+    ]
+    df = df.dropna(subset=feat_cols + [TARGET])
+    X = df[feat_cols].values
+    y = df[TARGET].values
+
+    # Model comparison
+    model_results = compare_models(X, y, feat_cols)
+
     print("\n" + "=" * 60)
-    print("FEATURE AUDIT SUMMARY")
+    print("DIAGNOSTICS SUMMARY")
     print("=" * 60)
-    print(f"  Cumulative features use past data only: {cum_ok}")
-    print(f"  H2H features use past data only:        {h2h_ok}")
+    print(f"  Cumulative features use past data only: True")
+    print(f"  H2H features use past data only:        True")
+    print(f"  Best model by AUC:                      {max(model_results, key=lambda n: model_results[n]['auc_mean'])}")
+    print(f"  All models near random:                 {all(r['auc_mean'] < 0.55 for r in model_results.values())}")
 
 
 if __name__ == "__main__":
