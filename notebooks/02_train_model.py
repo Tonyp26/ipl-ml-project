@@ -29,6 +29,7 @@ import seaborn as sns
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_PATH = BASE_DIR / "data" / "processed" / "matches.csv"
+ELO_PATH = BASE_DIR / "data" / "processed" / "matches_with_elo.csv"
 MODEL_DIR = BASE_DIR / "models"
 FEATURES_PATH = MODEL_DIR / "feature_config.json"
 EVAL_PATH = MODEL_DIR / "evaluation.json"
@@ -46,7 +47,7 @@ def normalise(name):
     return TEAM_MAP.get(name, name)
 
 
-def prepare_features(df):
+def prepare_features(df, has_elo=False):
     """Build pre-match features."""
     df = df.copy()
     df["batting_team"] = df["batting_team"].apply(normalise)
@@ -150,6 +151,9 @@ def prepare_features(df):
         "home_diff", "t1_matches", "t2_matches",
         "season_num",
     ]
+    if has_elo and "elo_diff" in df.columns:
+        feature_cols.append("elo_diff")
+        print(f"  + Elo features enabled (elo_diff)")
 
     df = df.dropna(subset=feature_cols + ["team1_won"])
     X = df[feature_cols].values
@@ -324,12 +328,18 @@ def main():
     print("IPL Model Training - Phase 2")
     print("=" * 60)
 
-    print(f"\nLoading {DATA_PATH} ...")
-    df = pd.read_csv(DATA_PATH)
-    print(f"  {len(df)} matches")
+    print(f"\nLoading data...")
+    if ELO_PATH.exists():
+        df = pd.read_csv(ELO_PATH)
+        print(f"  Loaded {ELO_PATH} ({len(df)} matches, with Elo features)")
+        has_elo = True
+    else:
+        df = pd.read_csv(DATA_PATH)
+        print(f"  Loaded {DATA_PATH} ({len(df)} matches)")
+        has_elo = False
 
     print("\nPreparing features...")
-    X, y, feature_cols, team_le = prepare_features(df)
+    X, y, feature_cols, team_le = prepare_features(df, has_elo=has_elo)
     print(f"  Features: {len(feature_cols)} | Samples: {len(X)}")
 
     print("\nTraining...")
