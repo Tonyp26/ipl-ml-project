@@ -49,6 +49,7 @@ All features are computed **chronologically** — for each match, only data from
 | Head-to-head | 2 | Historical win %, match count |
 | Elo rating | 1 | Elo difference (K=32) |
 | Venue-specific | 7 | Team win % at venue, avg runs |
+| Scoring/NRR | 13 | runs_scored_diff, NRR, PP/death RR |
 | Momentum | 11 | Streaks, last 3/5 win % |
 
 ### 3. Data Normalization
@@ -83,21 +84,24 @@ Franchise name changes are mapped to canonical names:
 6. **Elo Features** — Added team Elo ratings; improved accuracy to 48.5%
 7. **Venue Features** — Added venue-specific team performance; improved CV stability
 8. **Momentum Features** — Added streaks and recent form; hurt performance (noise)
+9. **Scoring/NRR Features** — Added batting/bowling strength, NRR, PP/death RR; best individual feature importance but overfitting at 48 features
 
 ## Experiment Results
 
 | Feature Set | Features | Accuracy | Test AUC | TS-CV AUC |
 |---|---|---|---|---|
 | Base | 16 | 45.0% | 0.430 | 0.478 |
-| +Elo | 17 | **48.5%** | 0.450 | 0.471 |
-| +Elo+Venue | 24 | 46.2% | **0.450** | **0.498** |
+| +Elo | 17 | **48.5%** | **0.450** | 0.471 |
+| +Elo+Venue | 24 | **46.2%** | **0.450** | 0.498 |
 | +Elo+Venue+Momentum | 35 | 43.8% | 0.415 | 0.500 |
+| +All (Scoring/NRR) | 48 | 44.4% | 0.423 | **0.512** |
 
 ### Key Findings
 
 - **T20 cricket is inherently unpredictable** from pre-match features. Even the best model performs at or below random chance.
 - **Elo ratings** were the single best feature addition (+3.5% accuracy).
 - **Venue-specific stats** improved cross-validation stability but not test accuracy.
+- **Scoring/NRR features** — `runs_scored_diff` has the highest individual importance of any feature, but the 48-feature model overfits.
 - **Momentum/streak features** were noise and hurt performance.
 - **Random splits inflate accuracy** through temporal leakage — always use chronological evaluation for time-series prediction.
 
@@ -160,7 +164,7 @@ python notebooks/03_model_diagnostics.py
 
 ## Future Work
 
-- **Scoring strength & NRR features** — Batting vs bowling strength separation, net run rate as a predictive feature
+- **Batting/Bowling strength separation** — Disentangle batting skill from bowling weakness
 - **Player-level features** — Individual player form, key player availability
 - **Tournament simulation** — Simulate full 2026 IPL season to predict standings and winner
 - **Model ensembling** — Combine multiple weak models for marginal gains
