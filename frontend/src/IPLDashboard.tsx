@@ -507,53 +507,6 @@ export default function IPLDashboard() {
         </div>
       </section>
 
-      {/* Section: Repository Architecture */}
-      <section className="mb-10">
-        <h2 className="text-2xl font-bold mb-6 text-white">GitHub Repository Architecture</h2>
-
-        <div className="bg-[#161B22] rounded-lg p-6 border border-gray-800">
-          <pre className="text-sm text-gray-300 font-mono overflow-x-auto leading-relaxed">
-{`IPL_ML_Project/
-├── data/
-│   ├── IPL.csv                          Raw ball-by-ball (gitignored)
-│   ├── processed/
-│   │   ├── matches.csv                  Aggregated match data
-│   │   ├── matches_with_elo.csv         + Elo features
-│   │   ├── matches_with_venue.csv       + Venue features
-│   │   ├── matches_with_momentum.csv    + Momentum features
-│   │   └── matches_with_scoring.csv     + Scoring/NRR features
-│   └── 2026_schedule.csv                Generated schedule
-│
-├── notebooks/
-│   ├── 01_aggregate_matches.py          Ball-by-ball → match aggregation
-│   ├── 02_train_model.py                Model training pipeline
-│   ├── 03_model_diagnostics.py          Target/feature/model audits
-│   ├── 04_elo_features.py               Elo rating calculation
-│   ├── 05_venue_features.py             Venue-specific team strength
-│   ├── 06_momentum_features.py          Form and streak features
-│   ├── 07_scoring_strength_features.py  NRR and batting/bowling
-│   ├── 08_backtest_2025.py              2025 out-of-sample evaluation
-│   ├── 09_generate_schedule.py          2026 schedule generation
-│   └── 10_tournament_simulation.py      Monte Carlo tournament sim
-│
-├── models/                              Generated artifacts (gitignored)
-├── output/                              Simulation results (gitignored)
-├── requirements.txt
-├── README.md
-└── .gitignore`}
-          </pre>
-        </div>
-
-        <div className="mt-4 bg-[#161B22] rounded-lg p-4 border border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-400 mb-2">Branch Structure</h3>
-          <pre className="text-sm text-gray-300 font-mono">
-{`main ────────────────────────────────────── (baseline + diagnostics)
-  └── phase3-feature-engineering ────────── (Elo, Venue, Momentum, NRR)
-    └── phase4-tournament-simulation ────── (backtest + simulator)`}
-          </pre>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="border-t border-gray-800 pt-6 pb-8">
         <div className="flex justify-between items-center text-sm text-gray-600">
