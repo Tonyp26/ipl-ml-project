@@ -128,6 +128,21 @@ Franchise name changes are mapped to canonical names:
 │   ├── team_encoder.joblib
 │   ├── evaluation.json
 │   └── *.png                        # Diagnostic plots
+├── output/                          # Simulation results (gitignored)
+│   ├── match_predictions.csv
+│   ├── points_table_projection.csv
+│   ├── playoff_odds.csv
+│   └── winner_odds.csv
+├── frontend/                        # Web dashboard (React + Vite + Tailwind)
+│   ├── src/
+│   │   ├── App.tsx                  # Router wrapper
+│   │   ├── IPLDashboard.tsx         # Main dashboard component
+│   │   ├── data/                    # Static JSON data files
+│   │   └── index.css
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── tailwind.config.js
+│   └── postcss.config.js
 ├── requirements.txt                 # System dependencies
 ├── requirements-ipl.txt             # IPL project dependencies
 ├── .gitignore
@@ -161,6 +176,24 @@ python notebooks/02_train_model.py
 # 4. Run diagnostics
 python notebooks/03_model_diagnostics.py
 ```
+
+### Web Dashboard
+
+```bash
+# Navigate to frontend
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+Dashboard available at `http://localhost:5173`
 
 ## Future Work
 
