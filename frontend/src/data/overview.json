@@ -1,0 +1,15 @@
+{
+  "projectOverview": {
+    "title": "IPL Match Winner Prediction",
+    "tagline": "An ML experiment in predicting T20 cricket",
+    "stats": [
+      { "label": "Matches", "value": "1,193" },
+      { "label": "Seasons", "value": "19" },
+      { "label": "Features", "value": "48" },
+      { "label": "Teams", "value": "10" },
+      { "label": "Best Accuracy", "value": "48.5%" }
+    ],
+    "description": "This project builds a classifier to predict whether the team batting first wins an IPL match, using only pre-match features. After rigorous diagnostics and iterative feature engineering, the key finding is that T20 cricket match outcomes are nearly unpredictable from pre-match features alone."
+  },
+  "researchNotice": "The underlying match prediction model achieved 40.5% accuracy on IPL 2025, 0.425 ROC-AUC, worse-than-random performance on out-of-sample data. Simulation outputs are provided for educational and software engineering purposes and should not be interpreted as reliable forecasts."
+}

@@ -1,0 +1,78 @@
+{
+  "models": [
+    {
+      "name": "Base",
+      "features": 16,
+      "accuracy": 0.450,
+      "testAuc": 0.430,
+      "tsCvAuc": 0.478,
+      "tsCvStd": 0.026,
+      "status": "baseline"
+    },
+    {
+      "name": "+Elo",
+      "features": 17,
+      "accuracy": 0.485,
+      "testAuc": 0.450,
+      "tsCvAuc": 0.471,
+      "tsCvStd": 0.052,
+      "status": "best-accuracy"
+    },
+    {
+      "name": "+Elo+Venue",
+      "features": 24,
+      "accuracy": 0.462,
+      "testAuc": 0.450,
+      "tsCvAuc": 0.498,
+      "tsCvStd": 0.074,
+      "status": "production"
+    },
+    {
+      "name": "+Elo+Venue+Momentum",
+      "features": 35,
+      "accuracy": 0.438,
+      "testAuc": 0.415,
+      "tsCvAuc": 0.500,
+      "tsCvStd": 0.061,
+      "status": "noise"
+    },
+    {
+      "name": "All (Scoring/NRR)",
+      "features": 48,
+      "accuracy": 0.444,
+      "testAuc": 0.423,
+      "tsCvAuc": 0.512,
+      "tsCvStd": 0.059,
+      "status": "noise"
+    }
+  ],
+  "featureImportance": [
+    { "feature": "cum_pct_diff", "importance": 0.076 },
+    { "feature": "elo_diff", "importance": 0.073 },
+    { "feature": "team1_avg_runs_at_venue", "importance": 0.071 },
+    { "feature": "t2_matches", "importance": 0.064 },
+    { "feature": "team2_venue_win_pct", "importance": 0.063 },
+    { "feature": "venue_win_pct_diff", "importance": 0.063 },
+    { "feature": "team2_avg_runs_at_venue", "importance": 0.060 },
+    { "feature": "team2_venue_matches", "importance": 0.059 },
+    { "feature": "t1_matches", "importance": 0.048 },
+    { "feature": "team1_venue_win_pct", "importance": 0.046 },
+    { "feature": "venue_avg_inn1", "importance": 0.043 },
+    { "feature": "t1_h2h_pct", "importance": 0.040 },
+    { "feature": "recent10_diff", "importance": 0.038 },
+    { "feature": "t1_h2h_n", "importance": 0.035 },
+    { "feature": "venue_freq", "importance": 0.035 },
+    { "feature": "team1_venue_matches", "importance": 0.035 },
+    { "feature": "t1_enc", "importance": 0.035 },
+    { "feature": "t2_enc", "importance": 0.030 },
+    { "feature": "season_num", "importance": 0.025 },
+    { "feature": "recent5_diff", "importance": 0.023 }
+  ],
+  "featureTimeline": [
+    { "phase": "Base", "features": 16, "auc": 0.430, "note": "Team ID, toss, venue, form, H2H" },
+    { "phase": "+Elo", "features": 17, "auc": 0.450, "note": "Elo ratings (K=32, home +65)" },
+    { "phase": "+Venue", "features": 24, "auc": 0.450, "note": "Venue-specific team strength" },
+    { "phase": "+Momentum", "features": 35, "auc": 0.415, "note": "Streaks, last 3/5 win %" },
+    { "phase": "+Scoring", "features": 48, "auc": 0.423, "note": "NRR, PP/death RR, batting/bowling" }
+  ]
+}

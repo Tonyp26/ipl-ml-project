@@ -1,0 +1,50 @@
+{
+  "matchProbabilities": {
+    "mean": 0.508,
+    "min": 0.451,
+    "max": 0.546,
+    "std": 0.020
+  },
+  "pointsTable": [
+    { "rank": 1, "team": "Rajasthan Royals", "mean": 14.5, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.399 },
+    { "rank": 2, "team": "Delhi Capitals", "mean": 14.3, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.498 },
+    { "rank": 3, "team": "Gujarat Titans", "mean": 14.3, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.476 },
+    { "rank": 4, "team": "Lucknow Super Giants", "mean": 14.2, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.424 },
+    { "rank": 5, "team": "Chennai Super Kings", "mean": 14.2, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.506 },
+    { "rank": 6, "team": "Kolkata Knight Riders", "mean": 13.9, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.419 },
+    { "rank": 7, "team": "Royal Challengers Bengaluru", "mean": 13.8, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.318 },
+    { "rank": 8, "team": "Punjab Kings", "mean": 13.7, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.346 },
+    { "rank": 9, "team": "Mumbai Indians", "mean": 13.6, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.344 },
+    { "rank": 10, "team": "Sunrisers Hyderabad", "mean": 13.5, "p5": 8, "p50": 14, "p95": 20, "playoffPct": 0.270 }
+  ],
+  "playoffOdds": [
+    { "team": "Chennai Super Kings", "p1st": 0.154, "pTop2": 0.281, "pTop4": 0.506 },
+    { "team": "Delhi Capitals", "p1st": 0.148, "pTop2": 0.277, "pTop4": 0.498 },
+    { "team": "Gujarat Titans", "p1st": 0.132, "pTop2": 0.257, "pTop4": 0.476 },
+    { "team": "Lucknow Super Giants", "p1st": 0.102, "pTop2": 0.205, "pTop4": 0.424 },
+    { "team": "Kolkata Knight Riders", "p1st": 0.102, "pTop2": 0.213, "pTop4": 0.419 },
+    { "team": "Rajasthan Royals", "p1st": 0.093, "pTop2": 0.192, "pTop4": 0.399 },
+    { "team": "Mumbai Indians", "p1st": 0.077, "pTop2": 0.160, "pTop4": 0.344 },
+    { "team": "Punjab Kings", "p1st": 0.075, "pTop2": 0.160, "pTop4": 0.346 },
+    { "team": "Royal Challengers Bengaluru", "p1st": 0.064, "pTop2": 0.140, "pTop4": 0.318 },
+    { "team": "Sunrisers Hyderabad", "p1st": 0.053, "pTop2": 0.115, "pTop4": 0.270 }
+  ],
+  "winnerOdds": [
+    { "rank": 1, "team": "Chennai Super Kings", "pWinner": 0.154 },
+    { "rank": 2, "team": "Delhi Capitals", "pWinner": 0.148 },
+    { "rank": 3, "team": "Gujarat Titans", "pWinner": 0.132 },
+    { "rank": 4, "team": "Lucknow Super Giants", "pWinner": 0.102 },
+    { "rank": 5, "team": "Kolkata Knight Riders", "pWinner": 0.102 },
+    { "rank": 6, "team": "Rajasthan Royals", "pWinner": 0.093 },
+    { "rank": 7, "team": "Mumbai Indians", "pWinner": 0.077 },
+    { "rank": 8, "team": "Punjab Kings", "pWinner": 0.075 },
+    { "rank": 9, "team": "Royal Challengers Bengaluru", "pWinner": 0.064 },
+    { "rank": 10, "team": "Sunrisers Hyderabad", "pWinner": 0.053 }
+  ],
+  "simulationParams": {
+    "iterations": 10000,
+    "model": "RandomForest (Elo+Venue, 24 features)",
+    "shrinkage": "50% toward 0.5",
+    "runtime": "3.2s"
+  }
+}

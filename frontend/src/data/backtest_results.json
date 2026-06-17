@@ -1,0 +1,49 @@
+{
+  "metrics": {
+    "accuracy": 0.405,
+    "rocAuc": 0.425,
+    "brierScore": 0.263,
+    "logLoss": 0.720
+  },
+  "baselines": {
+    "accuracy": 0.500,
+    "rocAuc": 0.500,
+    "brierScore": 0.250,
+    "logLoss": 0.693
+  },
+  "standings": [
+    { "predRank": 1, "team": "Punjab Kings", "predPts": 22, "actualRank": 4, "actualPts": 20, "match": true },
+    { "predRank": 2, "team": "Chennai Super Kings", "predPts": 16, "actualRank": 9, "actualPts": 8, "match": false },
+    { "predRank": 3, "team": "Delhi Capitals", "predPts": 16, "actualRank": 5, "actualPts": 12, "match": false },
+    { "predRank": 4, "team": "Kolkata Knight Riders", "predPts": 16, "actualRank": 7, "actualPts": 10, "match": false },
+    { "predRank": 5, "team": "Lucknow Super Giants", "predPts": 16, "actualRank": 6, "actualPts": 12, "match": false },
+    { "predRank": 6, "team": "Royal Challengers Bengaluru", "predPts": 16, "actualRank": 1, "actualPts": 22, "match": false },
+    { "predRank": 7, "team": "Mumbai Indians", "predPts": 14, "actualRank": 3, "actualPts": 18, "match": false },
+    { "predRank": 8, "team": "Sunrisers Hyderabad", "predPts": 14, "actualRank": 8, "actualPts": 12, "match": false },
+    { "predRank": 9, "team": "Rajasthan Royals", "predPts": 10, "actualRank": 9, "actualPts": 8, "match": false },
+    { "predRank": 10, "team": "Gujarat Titans", "predPts": 8, "actualRank": 3, "actualPts": 18, "match": false }
+  ],
+  "top4Overlap": { "predicted": 4, "actual": 4, "overlap": 1, "teams": ["Punjab Kings"] },
+  "confidentPredictions": [
+    { "rank": 1, "date": "2025-04-07", "t1": "RCB", "t2": "MI", "p1": 0.359, "correct": false },
+    { "rank": 2, "date": "2025-03-28", "t1": "RCB", "t2": "CSK", "p1": 0.372, "correct": false },
+    { "rank": 3, "date": "2025-04-05", "t1": "DC", "t2": "CSK", "p1": 0.380, "correct": false },
+    { "rank": 4, "date": "2025-03-24", "t1": "LSG", "t2": "DC", "p1": 0.620, "correct": false },
+    { "rank": 5, "date": "2025-04-10", "t1": "RCB", "t2": "DC", "p1": 0.618, "correct": false },
+    { "rank": 6, "date": "2025-04-19", "t1": "DC", "t2": "GT", "p1": 0.390, "correct": true },
+    { "rank": 7, "date": "2025-04-23", "t1": "SRH", "t2": "MI", "p1": 0.608, "correct": false },
+    { "rank": 8, "date": "2025-04-27", "t1": "MI", "t2": "LSG", "p1": 0.605, "correct": true },
+    { "rank": 9, "date": "2025-05-20", "t1": "CSK", "t2": "RR", "p1": 0.604, "correct": false },
+    { "rank": 10, "date": "2025-03-25", "t1": "PBKS", "t2": "GT", "p1": 0.402, "correct": false },
+    { "rank": 11, "date": "2025-05-27", "t1": "LSG", "t2": "RCB", "p1": 0.596, "correct": false },
+    { "rank": 12, "date": "2025-03-30", "t1": "RR", "t2": "CSK", "p1": 0.591, "correct": true },
+    { "rank": 13, "date": "2025-04-13", "t1": "MI", "t2": "DC", "p1": 0.591, "correct": true },
+    { "rank": 14, "date": "2025-04-28", "t1": "GT", "t2": "RR", "p1": 0.409, "correct": true },
+    { "rank": 15, "date": "2025-03-31", "t1": "KKR", "t2": "MI", "p1": 0.414, "correct": true },
+    { "rank": 16, "date": "2025-04-04", "t1": "LSG", "t2": "MI", "p1": 0.586, "correct": true },
+    { "rank": 17, "date": "2025-04-26", "t1": "PBKS", "t2": "KKR", "p1": 0.416, "correct": true },
+    { "rank": 18, "date": "2025-05-26", "t1": "MI", "t2": "PBKS", "p1": 0.582, "correct": false },
+    { "rank": 19, "date": "2025-03-23", "t1": "SRH", "t2": "RR", "p1": 0.581, "correct": true },
+    { "rank": 20, "date": "2025-04-17", "t1": "SRH", "t2": "MI", "p1": 0.420, "correct": true }
+  ]
+}
