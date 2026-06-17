@@ -14,3 +14,10 @@ notebooks/.ipynb_checkpoints/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
+
+# Output
+output/
+
+# Schedule
+data/2026_schedule.csv
