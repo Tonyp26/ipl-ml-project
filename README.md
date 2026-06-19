@@ -62,7 +62,7 @@ Franchise name changes are mapped to canonical names:
 | Kings XI Punjab | Punjab Kings |
 | Royal Challengers Bangalore | Royal Challengers Bengaluru |
 | Deccan Chargers | Sunrisers Hyderabad |
-| Rising Pune Supergiant | Rising Pune Supergiants |
+| Rising Pune Supergiant | Lucknow Super Giants |
 
 ## Model Development
 
